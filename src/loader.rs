@@ -1,8 +1,8 @@
 use crate::protocol::software_crc;
-pub fn check_crc(&self, frame: &[u8]) -> Result<bool, String> {
+pub fn check_crc(frame: &[u8]) -> Result<bool, String> {
     let data_length = ((frame[3] as u16) << 8) | (frame[2] as u16);
     let data = &frame[4..4 + (data_length as usize)];
-    let crc = software_crc(data, data_length);
+    let crc = software_crc(data, data_length as usize);
 
     // check if crc and last 4 bytes of frame are same
     let check_crc_value =

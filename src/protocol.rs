@@ -1,3 +1,4 @@
+use crc::{ Crc, CRC_32_ISO_HDLC };
 pub fn software_crc(data: &[u8], length: usize) -> [u8; 4] {
     const CRC32_POLYNOMIAL: u32 = 0xedb88320; // IEEE 802.3 CRC-32 polynomial
     let mut crc = 0xffffffff_u32;
@@ -19,4 +20,9 @@ pub fn software_crc(data: &[u8], length: usize) -> [u8; 4] {
         ((crc >> 16) & 0xff) as u8,
         ((crc >> 24) & 0xff) as u8, // Most significant byte
     ]
+}
+
+pub fn compute_crc(data: &[u8]) -> u32 {
+    let crc = Crc::<u32>::new(&CRC_32_ISO_HDLC);
+    !crc.checksum(data)
 }

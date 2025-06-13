@@ -7,7 +7,10 @@ use std::time::Duration;
 fn main() {
     // The byte sequence to send
     let data_to_send: [u8; 8] = [0xff, 0xf9, 0x00, 0x02, 0xc1, 0x00, 0xf5, 0xe7];
-
+    println!("Sending data to device: {:?}", data_to_send);
+    // find crc of 0xff, 0xf9, 0x00, 0x02, 0xc1
+    let crc = protocol::compute_crc(&data_to_send[0..6]);
+    println!("Calculated CRC: {:?}", crc);
     // First connect to the device
     match serial::connect_to_device() {
         Ok(mut port) => {

@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 serialport = "4.2"
 rusb = "0.9"
+crc = "3.0"
