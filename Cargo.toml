@@ -1,0 +1,8 @@
+[package]
+name = "msp_dap_link_via_serial"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+serialport = "4.2"
+rusb = "0.9"
