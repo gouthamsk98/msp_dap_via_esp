@@ -7,3 +7,7 @@ edition = "2024"
 serialport = "4.2"
 rusb = "0.9"
 crc = "3.0"
+tracing = "0.1.37"
+tracing-subscriber = "0.3.17"
+clap = { version = "4.0", features = ["derive"] }
+goblin = "0.10.0"

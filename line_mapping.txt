@@ -1,0 +1,243 @@
+
+main.elf:     file format elf32-littlearm
+
+
+Disassembly of section .text:
+
+000000c0 <SYSCFG_DL_SYSCTL_init>:
+SYSCFG_DL_SYSCTL_init():
+/home/code_compiler_node_msp/Project_file/msp/build1/Debug/syscfg/ti_msp_dl_config.c:105
+  c0:	480d      	ldr	r0, [pc, #52]	@ (f8 <SYSCFG_DL_SYSCTL_init+0x38>)
+  c2:	2100      	movs	r1, #0
+DL_SYSCTL_setBORThreshold():
+/home/mspm0-sdk/source/ti/driverlib/m0p/sysctl/dl_sysctl_mspm0g1x0x_g3x0x.h:1302
+  c4:	6001      	str	r1, [r0, #0]
+  c6:	480d      	ldr	r0, [pc, #52]	@ (fc <SYSCFG_DL_SYSCTL_init+0x3c>)
+DL_Common_updateReg():
+/home/mspm0-sdk/source/ti/driverlib/dl_common.h:68
+  c8:	1f01      	subs	r1, r0, #4
+  ca:	680a      	ldr	r2, [r1, #0]
+  cc:	2303      	movs	r3, #3
+  ce:	43db      	mvns	r3, r3
+/home/mspm0-sdk/source/ti/driverlib/dl_common.h:69
+  d0:	4013      	ands	r3, r2
+/home/mspm0-sdk/source/ti/driverlib/dl_common.h:70
+  d2:	600b      	str	r3, [r1, #0]
+DL_SYSCTL_disableHFXT():
+/home/mspm0-sdk/source/ti/driverlib/m0p/sysctl/dl_sysctl_mspm0g1x0x_g3x0x.h:1985
+  d4:	6841      	ldr	r1, [r0, #4]
+  d6:	2201      	movs	r2, #1
+  d8:	4391      	bics	r1, r2
+  da:	6041      	str	r1, [r0, #4]
+DL_SYSCTL_disableSYSPLL():
+/home/mspm0-sdk/source/ti/driverlib/m0p/sysctl/dl_sysctl_mspm0g1x0x_g3x0x.h:1968
+  dc:	6841      	ldr	r1, [r0, #4]
+  de:	0212      	lsls	r2, r2, #8
+  e0:	4391      	bics	r1, r2
+  e2:	6041      	str	r1, [r0, #4]
+DL_Common_updateReg():
+/home/mspm0-sdk/source/ti/driverlib/dl_common.h:68
+  e4:	6801      	ldr	r1, [r0, #0]
+  e6:	2230      	movs	r2, #48	@ 0x30
+/home/mspm0-sdk/source/ti/driverlib/dl_common.h:69
+  e8:	4391      	bics	r1, r2
+/home/mspm0-sdk/source/ti/driverlib/dl_common.h:70
+  ea:	6001      	str	r1, [r0, #0]
+/home/mspm0-sdk/source/ti/driverlib/dl_common.h:68
+  ec:	6801      	ldr	r1, [r0, #0]
+  ee:	220f      	movs	r2, #15
+/home/mspm0-sdk/source/ti/driverlib/dl_common.h:69
+  f0:	4391      	bics	r1, r2
+/home/mspm0-sdk/source/ti/driverlib/dl_common.h:70
+  f2:	6001      	str	r1, [r0, #0]
+SYSCFG_DL_SYSCTL_init():
+/home/code_compiler_node_msp/Project_file/msp/build1/Debug/syscfg/ti_msp_dl_config.c:117
+  f4:	4770      	bx	lr
+  f6:	46c0      	nop			@ (mov r8, r8)
+  f8:	400b0308 	.word	0x400b0308
+  fc:	400b0104 	.word	0x400b0104
+
+00000100 <main>:
+main():
+/home/code_compiler_node_msp/Project_file/msp/build1/Debug/../main.c:10
+ 100:	4d0c      	ldr	r5, [pc, #48]	@ (134 <main+0x34>)
+ 102:	4c0d      	ldr	r4, [pc, #52]	@ (138 <main+0x38>)
+ 104:	2001      	movs	r0, #1
+ 106:	0346      	lsls	r6, r0, #13
+/home/code_compiler_node_msp/Project_file/msp/build1/Debug/../main.c:12
+ 108:	f000 f860 	bl	1cc <SYSCFG_DL_init>
+ 10c:	480b      	ldr	r0, [pc, #44]	@ (13c <main+0x3c>)
+ 10e:	2181      	movs	r1, #129	@ 0x81
+DL_GPIO_initDigitalOutput():
+/home/mspm0-sdk/source/ti/driverlib/dl_gpio.h:1887
+ 110:	6001      	str	r1, [r0, #0]
+DL_GPIO_enableOutput():
+/home/mspm0-sdk/source/ti/driverlib/dl_gpio.h:2245
+ 112:	622e      	str	r6, [r5, #32]
+DL_GPIO_clearPins():
+/home/mspm0-sdk/source/ti/driverlib/dl_gpio.h:2223
+ 114:	4628      	mov	r0, r5
+ 116:	3810      	subs	r0, #16
+ 118:	6006      	str	r6, [r0, #0]
+main():
+/home/code_compiler_node_msp/Project_file/msp/build1/Debug/../main.c:20
+ 11a:	4620      	mov	r0, r4
+ 11c:	f000 f84c 	bl	1b8 <DL_Common_delayCycles>
+DL_GPIO_togglePins():
+/home/mspm0-sdk/source/ti/driverlib/dl_gpio.h:2234
+ 120:	602e      	str	r6, [r5, #0]
+main():
+/home/code_compiler_node_msp/Project_file/msp/build1/Debug/../main.c:20
+ 122:	4620      	mov	r0, r4
+ 124:	f000 f848 	bl	1b8 <DL_Common_delayCycles>
+DL_GPIO_togglePins():
+/home/mspm0-sdk/source/ti/driverlib/dl_gpio.h:2234
+ 128:	602e      	str	r6, [r5, #0]
+main():
+/home/code_compiler_node_msp/Project_file/msp/build1/Debug/../main.c:20
+ 12a:	4620      	mov	r0, r4
+ 12c:	f000 f844 	bl	1b8 <DL_Common_delayCycles>
+DL_GPIO_togglePins():
+/home/mspm0-sdk/source/ti/driverlib/dl_gpio.h:2234
+ 130:	602e      	str	r6, [r5, #0]
+main():
+/home/code_compiler_node_msp/Project_file/msp/build1/Debug/../main.c:19
+ 132:	e7f2      	b.n	11a <main+0x1a>
+ 134:	400a32b0 	.word	0x400a32b0
+ 138:	09896800 	.word	0x09896800
+ 13c:	40428078 	.word	0x40428078
+
+00000140 <SYSCFG_DL_GPIO_init>:
+SYSCFG_DL_GPIO_init():
+/home/code_compiler_node_msp/Project_file/msp/build1/Debug/syscfg/ti_msp_dl_config.c:66
+ 140:	4807      	ldr	r0, [pc, #28]	@ (160 <SYSCFG_DL_GPIO_init+0x20>)
+ 142:	2181      	movs	r1, #129	@ 0x81
+DL_GPIO_initDigitalOutput():
+/home/mspm0-sdk/source/ti/driverlib/dl_gpio.h:1887
+ 144:	6001      	str	r1, [r0, #0]
+ 146:	6041      	str	r1, [r0, #4]
+ 148:	6541      	str	r1, [r0, #84]	@ 0x54
+ 14a:	6581      	str	r1, [r0, #88]	@ 0x58
+ 14c:	6081      	str	r1, [r0, #8]
+ 14e:	60c1      	str	r1, [r0, #12]
+ 150:	6481      	str	r1, [r0, #72]	@ 0x48
+ 152:	6501      	str	r1, [r0, #80]	@ 0x50
+ 154:	4803      	ldr	r0, [pc, #12]	@ (164 <SYSCFG_DL_GPIO_init+0x24>)
+ 156:	4904      	ldr	r1, [pc, #16]	@ (168 <SYSCFG_DL_GPIO_init+0x28>)
+DL_GPIO_clearPins():
+/home/mspm0-sdk/source/ti/driverlib/dl_gpio.h:2223
+ 158:	6001      	str	r1, [r0, #0]
+DL_GPIO_enableOutput():
+/home/mspm0-sdk/source/ti/driverlib/dl_gpio.h:2245
+ 15a:	6301      	str	r1, [r0, #48]	@ 0x30
+SYSCFG_DL_GPIO_init():
+/home/code_compiler_node_msp/Project_file/msp/build1/Debug/syscfg/ti_msp_dl_config.c:101
+ 15c:	4770      	bx	lr
+ 15e:	46c0      	nop			@ (mov r8, r8)
+ 160:	40428078 	.word	0x40428078
+ 164:	400a32a0 	.word	0x400a32a0
+ 168:	01d1e000 	.word	0x01d1e000
+
+0000016c <SYSCFG_DL_initPower>:
+SYSCFG_DL_initPower():
+/home/code_compiler_node_msp/Project_file/msp/build1/Debug/syscfg/ti_msp_dl_config.c:56
+ 16c:	b580      	push	{r7, lr}
+ 16e:	4806      	ldr	r0, [pc, #24]	@ (188 <SYSCFG_DL_initPower+0x1c>)
+ 170:	4906      	ldr	r1, [pc, #24]	@ (18c <SYSCFG_DL_initPower+0x20>)
+DL_GPIO_reset():
+/home/mspm0-sdk/source/ti/driverlib/dl_gpio.h:1858
+ 172:	6041      	str	r1, [r0, #4]
+ 174:	4a06      	ldr	r2, [pc, #24]	@ (190 <SYSCFG_DL_initPower+0x24>)
+ 176:	6051      	str	r1, [r2, #4]
+ 178:	4906      	ldr	r1, [pc, #24]	@ (194 <SYSCFG_DL_initPower+0x28>)
+DL_GPIO_enablePower():
+/home/mspm0-sdk/source/ti/driverlib/dl_gpio.h:1824
+ 17a:	6001      	str	r1, [r0, #0]
+ 17c:	6011      	str	r1, [r2, #0]
+ 17e:	2010      	movs	r0, #16
+SYSCFG_DL_initPower():
+/home/code_compiler_node_msp/Project_file/msp/build1/Debug/syscfg/ti_msp_dl_config.c:62
+ 180:	f000 f81a 	bl	1b8 <DL_Common_delayCycles>
+/home/code_compiler_node_msp/Project_file/msp/build1/Debug/syscfg/ti_msp_dl_config.c:63
+ 184:	bd80      	pop	{r7, pc}
+ 186:	46c0      	nop			@ (mov r8, r8)
+ 188:	400a0800 	.word	0x400a0800
+ 18c:	b1000003 	.word	0xb1000003
+ 190:	400a2800 	.word	0x400a2800
+ 194:	26000001 	.word	0x26000001
+
+00000198 <_c_int00_noinit_noargs>:
+_c_int00_template():
+/workspace/llvm_cgt/build/Release/ti-libc/ARM_LLVM/src/boot_cortex_m.c:48
+ 198:	4806      	ldr	r0, [pc, #24]	@ (1b4 <_c_int00_noinit_noargs+0x1c>)
+ 19a:	f380 8808 	msr	MSP, r0
+/workspace/llvm_cgt/build/Release/ti-libc/ARM_LLVM/src/boot_cortex_m.c:59
+ 19e:	bf00      	nop
+ 1a0:	bf00      	nop
+/workspace/llvm_cgt/build/Release/ti-libc/ARM_LLVM/src/boot_cortex_m.c:60
+ 1a2:	f000 f81d 	bl	1e0 <_system_pre_init>
+ 1a6:	2000      	movs	r0, #0
+/workspace/llvm_cgt/build/Release/ti-libc/ARM_LLVM/src/boot_cortex_m.c:69
+ 1a8:	f7ff ffaa 	bl	100 <main>
+ 1ac:	2001      	movs	r0, #1
+/workspace/llvm_cgt/build/Release/ti-libc/ARM_LLVM/src/boot_cortex_m.c:71
+ 1ae:	f000 f819 	bl	1e4 <abort>
+_c_int00_noinit_noargs():
+/workspace/llvm_cgt/build/Release/ti-libc/ARM_LLVM/src/boot_cortex_m.c:71
+ 1b2:	46c0      	nop			@ (mov r8, r8)
+ 1b4:	20208000 	.word	0x20208000
+
+000001b8 <DL_Common_delayCycles>:
+DL_Common_delayCycles():
+ 1b8:	b082      	sub	sp, #8
+ 1ba:	9001      	str	r0, [sp, #4]
+ 1bc:	9901      	ldr	r1, [sp, #4]
+ 1be:	1e88      	subs	r0, r1, #2
+ 1c0:	1f00      	subs	r0, r0, #4
+ 1c2:	bf00      	nop
+ 1c4:	d2fc      	bcs.n	1c0 <DL_Common_delayCycles+0x8>
+ 1c6:	9000      	str	r0, [sp, #0]
+ 1c8:	b002      	add	sp, #8
+ 1ca:	4770      	bx	lr
+
+000001cc <SYSCFG_DL_init>:
+SYSCFG_DL_init():
+/home/code_compiler_node_msp/Project_file/msp/build1/Debug/syscfg/ti_msp_dl_config.c:48
+ 1cc:	b580      	push	{r7, lr}
+/home/code_compiler_node_msp/Project_file/msp/build1/Debug/syscfg/ti_msp_dl_config.c:49
+ 1ce:	f7ff ffcd 	bl	16c <SYSCFG_DL_initPower>
+/home/code_compiler_node_msp/Project_file/msp/build1/Debug/syscfg/ti_msp_dl_config.c:50
+ 1d2:	f7ff ffb5 	bl	140 <SYSCFG_DL_GPIO_init>
+/home/code_compiler_node_msp/Project_file/msp/build1/Debug/syscfg/ti_msp_dl_config.c:52
+ 1d6:	f7ff ff73 	bl	c0 <SYSCFG_DL_SYSCTL_init>
+/home/code_compiler_node_msp/Project_file/msp/build1/Debug/syscfg/ti_msp_dl_config.c:53
+ 1da:	bd80      	pop	{r7, pc}
+
+000001dc <Reset_Handler>:
+Reset_Handler():
+/home/mspm0-sdk/source/ti/devices/msp/m0p/startup_system_files/ticlang/startup_mspm0g350x_ticlang.c:184
+ 1dc:	e7dc      	b.n	198 <_c_int00_noinit_noargs>
+/home/mspm0-sdk/source/ti/devices/msp/m0p/startup_system_files/ticlang/startup_mspm0g350x_ticlang.c:187
+ 1de:	4770      	bx	lr
+
+000001e0 <_system_pre_init>:
+_system_pre_init():
+/workspace/llvm_cgt/build/Release/ti-libc/ARM_LLVM/src/pre_init.c:57
+ 1e0:	2001      	movs	r0, #1
+/workspace/llvm_cgt/build/Release/ti-libc/ARM_LLVM/src/pre_init.c:58
+ 1e2:	4770      	bx	lr
+
+000001e4 <abort>:
+abort():
+/workspace/llvm_cgt/build/Release/ti-libc/ARM_LLVM/src/exit.c:78
+ 1e4:	bf00      	nop
+/workspace/llvm_cgt/build/Release/ti-libc/ARM_LLVM/src/exit.c:82
+ 1e6:	e7fe      	b.n	1e6 <abort+0x2>
+
+000001e8 <ADC0_IRQHandler>:
+Default_Handler():
+/home/mspm0-sdk/source/ti/devices/msp/m0p/startup_system_files/ticlang/startup_mspm0g350x_ticlang.c:195
+ 1e8:	e7fe      	b.n	1e8 <ADC0_IRQHandler>
+ 1ea:	0000      	movs	r0, r0
+ 1ec:	0000      	movs	r0, r0
+	...

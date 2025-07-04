@@ -88,12 +88,16 @@ impl SerialLoader {
 
         Ok(())
     }
-
-    /// Read from memory-mapped register (equivalent to OpenOCD's mdw command)
-    pub fn read_word(&mut self, address: u32) -> Result<u32, Box<dyn std::error::Error>> {
-        let command = ProtocolHandler::new(SWDCommand::Read {
+    //read_bytes
+    /// Read from memory-mapped register (equivalent to OpenOCD's mrb command)
+    pub fn read_bytes(
+        &mut self,
+        address: u32,
+        length: u32
+    ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+        let command = ProtocolHandler::new(SWDCommand::ReadBytes {
             start_address: address,
-            length: 4, // Read 4 bytes (u32)
+            length,
         });
         self.port.write_all(&command.write_frame())?;
         self.port.flush()?;
@@ -102,24 +106,65 @@ impl SerialLoader {
         std::thread::sleep(Duration::from_millis(50));
 
         // Read response
-        let mut buffer = [0; 256];
-        let bytes_read = self.port.read(&mut buffer)?;
-        match command.read_frame(&buffer[..bytes_read]) {
-            Ok(data) => {
-                if data.len() < 4 {
-                    return Err("Received less than 4 bytes from read_word".into());
-                }
-                // Convert the first 4 bytes to u32
-                let value =
-                    ((data[0] as u32) << 24) |
-                    ((data[1] as u32) << 16) |
-                    ((data[2] as u32) << 8) |
-                    (data[3] as u32);
+        let mut buffer = vec![0; length as usize];
+        match self.port.read_exact(&mut buffer) {
+            Ok(_) => Ok(buffer),
+            Err(e) => {
+                info!("Error reading bytes from address 0x{:08X}: {}", address, e);
+                Err(e.into())
+            }
+        }
+    }
+    pub fn read_word(&mut self, address: u32) -> Result<u32, Box<dyn std::error::Error>> {
+        let command = ProtocolHandler::new(SWDCommand::ReadWord { start_address: address });
+        self.port.write_all(&command.write_frame())?;
+        self.port.flush()?;
+        // Wait for response
+        std::thread::sleep(Duration::from_millis(50));
+        // Read response
+        let mut buffer = [0; 8]; // 4 bytes for a word
+        match self.port.read_exact(&mut buffer) {
+            Ok(_) => {
+                info!("Read word from address 0x{:08X}: {:?}", address, buffer);
+                info!("Buffer length: {}", buffer.len());
+                info!("Buffer content: {:02X?}", buffer);
+                // Convert buffer to u32 value
+                let value = u32::from_le_bytes(buffer[..4].try_into().unwrap());
                 Ok(value)
             }
             Err(e) => {
-                // Log the error and return it
                 info!("Error reading word from address 0x{:08X}: {}", address, e);
+                Err(e.into())
+            }
+        }
+    }
+    /// Read from memory-mapped register (equivalent to OpenOCD's mdw command)
+    pub fn read_words(
+        &mut self,
+        address: u32,
+        length: u32
+    ) -> Result<u32, Box<dyn std::error::Error>> {
+        let command = ProtocolHandler::new(SWDCommand::ReadWords {
+            start_address: address,
+            length,
+        });
+        self.port.write_all(&command.write_frame())?;
+        self.port.flush()?;
+        // Wait for response
+        std::thread::sleep(Duration::from_millis(50));
+        // Read response
+        let mut buffer = vec![0; (length * 4) as usize]; // 4 bytes per word
+        match self.port.read_exact(&mut buffer) {
+            Ok(_) => {
+                // Convert buffer to u32 value
+                if buffer.len() < 4 {
+                    return Err("Buffer too short to read a word".into());
+                }
+                let value = u32::from_le_bytes(buffer[..4].try_into().unwrap());
+                Ok(value)
+            }
+            Err(e) => {
+                info!("Error reading words from address 0x{:08X}: {}", address, e);
                 Err(e.into())
             }
         }
@@ -129,8 +174,8 @@ impl SerialLoader {
     pub fn read_pc_register(&mut self) -> Result<u32, Box<dyn std::error::Error>> {
         // Step 1: Write register index (0x0F) to DCRSR at 0xE000EDF4
         const DCRSR_ADDR: u32 = 0xe000edf4;
-        const DCRDR_ADDR: u32 = 0xe000edf8;
-        const PC_REG_INDEX: u32 = 0x0f;
+        const DCRDR_ADDR: u32 = 0x00000100;
+        const PC_REG_INDEX: u32 = 0x04;
 
         info!("Writing PC register index (0x{:02X}) to DCRSR (0x{:08X})", PC_REG_INDEX, DCRSR_ADDR);
         self.write_word(DCRSR_ADDR, PC_REG_INDEX)?;
@@ -139,7 +184,7 @@ impl SerialLoader {
         std::thread::sleep(Duration::from_millis(10));
 
         // Step 2: Read the PC value from DCRDR at 0xE000EDF8
-        let pc_value = self.read_word(DCRDR_ADDR)?;
+        let pc_value = self.read_words(DCRDR_ADDR, 1)?;
         info!("Read PC value: 0x{:08X} from DCRDR (0x{:08X})", pc_value, DCRDR_ADDR);
         Ok(pc_value)
     }
@@ -153,7 +198,7 @@ impl SerialLoader {
         self.write_word(DCRSR_ADDR, reg_index)?;
 
         std::thread::sleep(Duration::from_millis(10));
-        let value = self.read_word(DCRDR_ADDR)?;
+        let value = self.read_words(DCRDR_ADDR, 1)?;
         info!("Read register index 0x{:02X} value: 0x{:08X}", reg_index, value);
         Ok(value)
     }

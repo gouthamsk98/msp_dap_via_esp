@@ -1,6 +1,7 @@
 mod serial;
 mod loader;
 mod protocol;
+// mod elf_reader;
 use std::thread;
 use std::time::Duration;
 use tracing_subscriber::FmtSubscriber;
@@ -56,10 +57,26 @@ enum Commands {
     /// Resume the target processor
     Resume,
     /// Read from a memory address
-    Read {
+    ReadBytes {
         /// Memory address to read from (hex format, e.g., 0x20000000)
         #[arg(value_parser = parse_hex)]
         address: u32,
+        /// Length of data to read in bytes (default is 4 bytes)
+        #[arg(short, long, default_value = "4")]
+        length: u32,
+    },
+    ReadWord {
+        /// Memory address to read from (hex format, e.g., 0x20000000)
+        #[arg(value_parser = parse_hex)]
+        address: u32,
+    },
+    ReadWords {
+        /// Memory address to read from (hex format, e.g., 0x20000000)
+        #[arg(value_parser = parse_hex)]
+        address: u32,
+        /// Number of words to read (default is 1 word)
+        #[arg(short, long, default_value = "1")]
+        length: u32,
     },
     /// Write to a memory address
     Write {
@@ -182,11 +199,39 @@ fn main() {
             info!("Resuming target processor...");
             debug.resume()
         }
-        Commands::Read { address } => {
+        Commands::ReadBytes { address, length } => {
             info!("Reading from address 0x{:08X}...", address);
+            match debug.read_bytes(address, length) {
+                Ok(value) => {
+                    info!(
+                        "0x{:08X}: {}",
+                        address,
+                        value
+                            .iter()
+                            .map(|b| format!("{:02X}", b))
+                            .collect::<Vec<_>>()
+                            .join(" ")
+                    );
+                    Ok(())
+                }
+                Err(e) => Err(e),
+            }
+        }
+        Commands::ReadWord { address } => {
+            info!("Reading word from address 0x{:08X}...", address);
             match debug.read_word(address) {
                 Ok(value) => {
                     info!("0x{:08X}: 0x{:08X}", address, value);
+                    Ok(())
+                }
+                Err(e) => Err(e),
+            }
+        }
+        Commands::ReadWords { address, length } => {
+            info!("Reading {} words from address 0x{:08X}...", length, address);
+            match debug.read_words(address, length) {
+                Ok(values) => {
+                    info!("0x{:08X}: {}", address, values);
                     Ok(())
                 }
                 Err(e) => Err(e),
