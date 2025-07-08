@@ -1,6 +1,7 @@
 mod serial;
 mod loader;
 mod protocol;
+mod socketio;
 // mod elf_reader;
 use std::thread;
 use std::time::Duration;
@@ -162,153 +163,178 @@ fn get_register_name(reg_index: u32) -> &'static str {
         _ => "UNKNOWN",
     }
 }
+#[tokio::main]
+async fn main() {
+    #[cfg(feature = "cli")]
+    {
+        let cli = Cli::parse();
 
-fn main() {
-    let cli = Cli::parse();
+        // Set up logging based on verbosity
+        let subscriber = if cli.verbose {
+            FmtSubscriber::builder().with_max_level(tracing::Level::DEBUG).finish()
+        } else {
+            FmtSubscriber::builder().with_max_level(tracing::Level::INFO).finish()
+        };
 
-    // Set up logging based on verbosity
-    let subscriber = if cli.verbose {
-        FmtSubscriber::builder().with_max_level(tracing::Level::DEBUG).finish()
-    } else {
-        FmtSubscriber::builder().with_max_level(tracing::Level::INFO).finish()
-    };
+        tracing::subscriber
+            ::set_global_default(subscriber)
+            .expect("Failed to set global default subscriber");
 
-    tracing::subscriber
-        ::set_global_default(subscriber)
-        .expect("Failed to set global default subscriber");
-
-    // Create the serial loader
-    let mut debug = match loader::SerialLoader::new(&cli.port, cli.baud) {
-        Ok(loader) => {
-            info!("Connected to {} at {} baud", cli.port, cli.baud);
-            loader
-        }
-        Err(e) => {
-            einfo!("Failed to connect to {}: {}", cli.port, e);
-            std::process::exit(1);
-        }
-    };
-
-    // Execute the command
-    let result = match cli.command {
-        Commands::Halt => {
-            info!("Halting target processor...");
-            debug.halt()
-        }
-        Commands::Resume => {
-            info!("Resuming target processor...");
-            debug.resume()
-        }
-        Commands::ReadBytes { address, length } => {
-            info!("Reading from address 0x{:08X}...", address);
-            match debug.read_bytes(address, length) {
-                Ok(value) => {
-                    info!(
-                        "0x{:08X}: {}",
-                        address,
-                        value
-                            .iter()
-                            .map(|b| format!("{:02X}", b))
-                            .collect::<Vec<_>>()
-                            .join(" ")
-                    );
-                    Ok(())
-                }
-                Err(e) => Err(e),
+        // Create the serial loader
+        let mut debug = match loader::SerialLoader::new(None, cli.baud) {
+            Ok(loader) => {
+                info!("Connected to {} at {} baud", cli.port, cli.baud);
+                loader
             }
-        }
-        Commands::ReadWord { address } => {
-            info!("Reading word from address 0x{:08X}...", address);
-            match debug.read_word(address) {
-                Ok(value) => {
-                    info!("0x{:08X}: 0x{:08X}", address, value);
-                    Ok(())
-                }
-                Err(e) => Err(e),
+            Err(e) => {
+                einfo!("Failed to connect to {}: {}", cli.port, e);
+                std::process::exit(1);
             }
-        }
-        Commands::ReadWords { address, length } => {
-            info!("Reading {} words from address 0x{:08X}...", length, address);
-            match debug.read_words(address, length) {
-                Ok(values) => {
-                    info!("0x{:08X}: {}", address, values);
-                    Ok(())
-                }
-                Err(e) => Err(e),
+        };
+
+        // Execute the command
+        let result = match cli.command {
+            Commands::Halt => {
+                info!("Halting target processor...");
+                debug.halt()
             }
-        }
-        Commands::Write { address, value } => {
-            info!("Writing 0x{:08X} to address 0x{:08X}...", value, address);
-            debug.write_word(address, value)
-        }
-        Commands::ReadReg { register } => {
-            match parse_register_name(&register) {
-                Ok(reg_index) => {
-                    info!("Reading register {}...", get_register_name(reg_index));
+            Commands::Resume => {
+                info!("Resuming target processor...");
+                debug.resume()
+            }
+            Commands::ReadBytes { address, length } => {
+                info!("Reading from address 0x{:08X}...", address);
+                match debug.read_bytes(address, length) {
+                    Ok(value) => {
+                        info!(
+                            "0x{:08X}: {}",
+                            address,
+                            value
+                                .iter()
+                                .map(|b| format!("{:02X}", b))
+                                .collect::<Vec<_>>()
+                                .join(" ")
+                        );
+                        Ok(())
+                    }
+                    Err(e) => Err(e),
+                }
+            }
+            Commands::ReadWord { address } => {
+                info!("Reading word from address 0x{:08X}...", address);
+                match debug.read_word(address) {
+                    Ok(value) => {
+                        info!("0x{:08X}: 0x{:08X}", address, value);
+                        Ok(())
+                    }
+                    Err(e) => Err(e),
+                }
+            }
+            Commands::ReadWords { address, length } => {
+                info!("Reading {} words from address 0x{:08X}...", length, address);
+                match debug.read_words(address, length) {
+                    Ok(values) => {
+                        info!("0x{:08X}: {}", address, values);
+                        Ok(())
+                    }
+                    Err(e) => Err(e),
+                }
+            }
+            Commands::Write { address, value } => {
+                info!("Writing 0x{:08X} to address 0x{:08X}...", value, address);
+                debug.write_word(address, value)
+            }
+            Commands::ReadReg { register } => {
+                match parse_register_name(&register) {
+                    Ok(reg_index) => {
+                        info!("Reading register {}...", get_register_name(reg_index));
+                        match debug.read_register(reg_index) {
+                            Ok(value) => {
+                                info!("{}: 0x{:08X}", get_register_name(reg_index), value);
+                                Ok(())
+                            }
+                            Err(e) => Err(e),
+                        }
+                    }
+                    Err(e) => {
+                        einfo!("Error: {}", e);
+                        std::process::exit(1);
+                    }
+                }
+            }
+            Commands::ReadPc => {
+                info!("Reading Program Counter...");
+                match debug.read_pc_register() {
+                    Ok(value) => {
+                        info!("PC: 0x{:08X}", value);
+                        Ok(())
+                    }
+                    Err(e) => Err(e),
+                }
+            }
+            Commands::ReadAll => {
+                info!("Reading all CPU registers...");
+                let mut errors = Vec::new();
+
+                // Read all registers R0-R15 and XPSR
+                for reg_index in 0..=16 {
                     match debug.read_register(reg_index) {
                         Ok(value) => {
                             info!("{}: 0x{:08X}", get_register_name(reg_index), value);
-                            Ok(())
                         }
-                        Err(e) => Err(e),
+                        Err(e) => {
+                            errors.push(
+                                format!("Failed to read {}: {}", get_register_name(reg_index), e)
+                            );
+                        }
                     }
+                    // Small delay between reads
+                    thread::sleep(Duration::from_millis(10));
                 }
-                Err(e) => {
-                    einfo!("Error: {}", e);
-                    std::process::exit(1);
-                }
-            }
-        }
-        Commands::ReadPc => {
-            info!("Reading Program Counter...");
-            match debug.read_pc_register() {
-                Ok(value) => {
-                    info!("PC: 0x{:08X}", value);
+
+                if !errors.is_empty() {
+                    for error in errors {
+                        einfo!("Error: {}", error);
+                    }
+                    Err("Some register reads failed".into())
+                } else {
                     Ok(())
                 }
-                Err(e) => Err(e),
             }
-        }
-        Commands::ReadAll => {
-            info!("Reading all CPU registers...");
-            let mut errors = Vec::new();
+        };
 
-            // Read all registers R0-R15 and XPSR
-            for reg_index in 0..=16 {
-                match debug.read_register(reg_index) {
-                    Ok(value) => {
-                        info!("{}: 0x{:08X}", get_register_name(reg_index), value);
-                    }
-                    Err(e) => {
-                        errors.push(
-                            format!("Failed to read {}: {}", get_register_name(reg_index), e)
-                        );
-                    }
+        match result {
+            Ok(_) => {
+                if cli.verbose {
+                    info!("Command completed successfully");
                 }
-                // Small delay between reads
-                thread::sleep(Duration::from_millis(10));
             }
-
-            if !errors.is_empty() {
-                for error in errors {
-                    einfo!("Error: {}", error);
-                }
-                Err("Some register reads failed".into())
-            } else {
-                Ok(())
+            Err(e) => {
+                einfo!("Command failed: {}", e);
+                std::process::exit(1);
             }
         }
-    };
-
-    match result {
-        Ok(_) => {
-            if cli.verbose {
-                info!("Command completed successfully");
-            }
-        }
-        Err(e) => {
-            einfo!("Command failed: {}", e);
-            std::process::exit(1);
-        }
+    }
+    #[cfg(feature = "socket")]
+    {
+        use socketioxide::SocketIo;
+        use axum::routing::get;
+        tracing::subscriber
+            ::set_global_default(
+                FmtSubscriber::builder().with_max_level(tracing::Level::INFO).finish()
+            )
+            .expect("Failed to set global default subscriber");
+        let (socketio_layer, io) = SocketIo::new_layer();
+        io.ns("/", socketio::on_connect);
+        let app = axum::Router
+            ::new()
+            .route(
+                "/",
+                get(|| async { "alive" })
+            )
+            .layer(socketio_layer);
+        let listener = tokio::net::TcpListener::bind("0.0.0.0:8536").await.unwrap();
+        info!("SocketIO server listening on http://0.0.0.0:8536");
+        axum::serve(listener, app).await.unwrap();
     }
 }

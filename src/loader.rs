@@ -3,15 +3,44 @@ use std::io::{ self, Write };
 use std::time::Duration;
 use crate::protocol::{ ProtocolHandler, SWDCommand };
 use tracing::info;
+
+const TARGET_PID: u16 = 0x8055; // Change this to your specific device PID
 pub struct SerialLoader {
     port: Box<dyn SerialPort>,
 }
 
 impl SerialLoader {
     /// Create a new ARM debug serial connection
-    pub fn new(port_name: &str, baud_rate: u32) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(
+        mut port_name: Option<&str>,
+        baud_rate: u32
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        let final_port_name = if port_name.is_none() {
+            let ports = serialport::available_ports()?;
+            info!("Available serial ports:");
+            if ports.is_empty() {
+                return Err("No serial ports found".into());
+            }
+            info!("number of ports: {}", ports.len());
+            let mut found_port_name = None;
+            for port in &ports {
+                match port.port_type {
+                    serialport::SerialPortType::UsbPort(ref usb_info) => {
+                        if usb_info.pid == TARGET_PID {
+                            found_port_name = Some(port.port_name.clone());
+                            info!("Found matching USB serial port: {}", port.port_name);
+                            break;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            found_port_name.ok_or("No matching USB serial port found")?
+        } else {
+            port_name.unwrap().to_string()
+        };
         let port = serialport
-            ::new(port_name, baud_rate)
+            ::new(final_port_name, baud_rate)
             .timeout(Duration::from_millis(1000))
             .data_bits(DataBits::Eight)
             .flow_control(FlowControl::None)

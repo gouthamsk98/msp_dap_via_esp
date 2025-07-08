@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.vscode/
+.DS_Store
+.env
+*.log
+coverage/
+*.tsbuildinfo
+*.js.map
+*.d.ts
+*.tgz
