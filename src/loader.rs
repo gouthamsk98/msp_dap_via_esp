@@ -4,11 +4,24 @@ use std::time::Duration;
 use crate::protocol::{ ProtocolHandler, SWDCommand };
 use tracing::info;
 
-const TARGET_PID: u16 = 0x8055; // Change this to your specific device PID
+pub const TARGET_PID: u16 = 0x8055; // Change this to your specific device PID
 pub struct SerialLoader {
     port: Box<dyn SerialPort>,
 }
-
+pub fn is_device_connected(pid: u16) -> bool {
+    let ports = serialport::available_ports().unwrap_or_else(|_| {
+        info!("No serial ports found");
+        vec![]
+    });
+    for port in ports {
+        if let serialport::SerialPortType::UsbPort(ref usb_info) = port.port_type {
+            if usb_info.pid == pid {
+                return true;
+            }
+        }
+    }
+    false
+}
 impl SerialLoader {
     /// Create a new ARM debug serial connection
     pub fn new(

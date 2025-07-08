@@ -2,6 +2,8 @@ use socketioxide::{ extract::{ AckSender, Data, SocketRef }, SocketIo };
 use serde_json::Value;
 use tracing::info;
 
+use crate::loader;
+
 pub fn on_connect(socket: SocketRef, Data(data): Data<Value>) {
     info!(ns = socket.ns(), ?socket.id, "Socket.IO connected");
     socket.emit("auth", &data).ok();
@@ -16,12 +18,20 @@ pub fn on_connect(socket: SocketRef, Data(data): Data<Value>) {
         ack.send(&data).ok();
     });
     register_debugger_handlers(&socket);
+    check_port_connection(socket.clone());
+}
+fn check_port_connection(socket: SocketRef) {
     tokio::spawn(async move {
+        let mut last_status = None;
         loop {
-            // This is where you would handle the main loop of your debugger
-            // For example, you might want to listen for commands or events
-            // and process them accordingly.
-            // This is a placeholder for your main loop logic.
+            // Check if the port is connected
+            let connected = loader::is_device_connected(loader::TARGET_PID);
+
+            if last_status != Some(connected) {
+                socket.emit("device-connected", &Value::Bool(connected)).ok();
+                last_status = Some(connected);
+            }
+
             tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
         }
     });
