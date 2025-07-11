@@ -695,6 +695,7 @@ dependencies = [
  "crc",
  "goblin",
  "rusb",
+ "serde",
  "serde_json",
  "serialport",
  "socketioxide",

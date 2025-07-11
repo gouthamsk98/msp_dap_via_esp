@@ -2,6 +2,7 @@ mod serial;
 mod loader;
 mod protocol;
 mod socketio;
+mod models;
 // mod elf_reader;
 use std::thread;
 use std::time::Duration;

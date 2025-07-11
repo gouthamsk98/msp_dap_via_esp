@@ -1,13 +1,10 @@
 use serialport::{ DataBits, FlowControl, Parity, SerialPort, StopBits };
-use std::io::{ self, Write };
+use std::io::Write;
 use std::time::Duration;
 use crate::protocol::{ ProtocolHandler, SWDCommand };
 use tracing::info;
 
 pub const TARGET_PID: u16 = 0x8055; // Change this to your specific device PID
-pub struct SerialLoader {
-    port: Box<dyn SerialPort>,
-}
 pub fn is_device_connected(pid: u16) -> bool {
     let ports = serialport::available_ports().unwrap_or_else(|_| {
         info!("No serial ports found");
@@ -22,17 +19,21 @@ pub fn is_device_connected(pid: u16) -> bool {
     }
     false
 }
+pub struct SerialLoader {
+    port: Option<Box<dyn SerialPort>>,
+}
 impl SerialLoader {
     /// Create a new ARM debug serial connection
     pub fn new(
-        mut port_name: Option<&str>,
+        port_name: Option<&str>,
         baud_rate: u32
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let final_port_name = if port_name.is_none() {
             let ports = serialport::available_ports()?;
             info!("Available serial ports:");
             if ports.is_empty() {
-                return Err("No serial ports found".into());
+                info!("No serial ports found");
+                return Ok(SerialLoader { port: None });
             }
             info!("number of ports: {}", ports.len());
             let mut found_port_name = None;
@@ -48,7 +49,12 @@ impl SerialLoader {
                     _ => {}
                 }
             }
-            found_port_name.ok_or("No matching USB serial port found")?
+            match found_port_name {
+                Some(name) => name,
+                None => {
+                    return Ok(SerialLoader { port: None });
+                }
+            }
         } else {
             port_name.unwrap().to_string()
         };
@@ -61,20 +67,67 @@ impl SerialLoader {
             .stop_bits(StopBits::One)
             .open()?;
 
-        Ok(SerialLoader { port })
+        Ok(SerialLoader { port: Some(port) })
+    }
+    //close the port
+    pub fn close(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(ref mut port) = self.port {
+            // port.flush()?;
+            // port.clear(serialport::ClearBuffer::All)?;
+        }
+        self.port = None;
+        // Port will be dropped when the struct is dropped
+        info!("Serial port closed successfully");
+        Ok(())
+    }
+    //reconnect the port
+    pub fn reconnect(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        self.close()?;
+        let ports = serialport::available_ports()?;
+        info!("Available serial ports:");
+        if ports.is_empty() {
+            return Err("No serial ports found".into());
+        }
+        info!("number of ports: {}", ports.len());
+        let mut found_port_name = None;
+        for port in &ports {
+            match port.port_type {
+                serialport::SerialPortType::UsbPort(ref usb_info) => {
+                    if usb_info.pid == TARGET_PID {
+                        found_port_name = Some(port.port_name.clone());
+                        info!("Found matching USB serial port: {}", port.port_name);
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+        let final_port_name = found_port_name.ok_or("No matching USB serial port found")?;
+        let port = serialport
+            ::new(final_port_name.clone(), 115200)
+            .timeout(Duration::from_millis(1000))
+            .data_bits(DataBits::Eight)
+            .flow_control(FlowControl::None)
+            .parity(Parity::None)
+            .stop_bits(StopBits::One)
+            .open()?;
+        self.port = Some(port);
+        info!("Reconnected to serial port: {}", final_port_name);
+        Ok(())
     }
     /// Halt the Program
     pub fn halt(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let command = ProtocolHandler::new(SWDCommand::Halt);
-        self.port.write_all(&command.write_frame())?;
-        self.port.flush()?;
+        let port = self.get_port()?;
+        port.write_all(&command.write_frame())?;
+        port.flush()?;
 
         // Wait for response
         std::thread::sleep(Duration::from_millis(10));
 
         // Read response to clear buffer
         let mut buffer = [0; 256];
-        match self.port.read(&mut buffer) {
+        match port.read(&mut buffer) {
             Ok(_) => {}
             Err(_) => {} // Ignore timeout errors
         }
@@ -84,13 +137,14 @@ impl SerialLoader {
     /// Resume the Program
     pub fn resume(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let command = ProtocolHandler::new(SWDCommand::Resume);
-        self.port.write_all(&command.write_frame())?;
-        self.port.flush()?;
+        let port = self.get_port()?;
+        port.write_all(&command.write_frame())?;
+        port.flush()?;
         // Wait for response
         std::thread::sleep(Duration::from_millis(10));
         // Read response to clear buffer
         let mut buffer = [0; 256];
-        match self.port.read(&mut buffer) {
+        match port.read(&mut buffer) {
             Ok(_) => {
                 todo!();
             }
@@ -115,15 +169,16 @@ impl SerialLoader {
             ],
         });
         // let command = format!("mww 0x{:08X} 0x{:08X}\n", address, value);
-        self.port.write_all(&command.write_frame())?;
-        self.port.flush()?;
+        let port = self.get_port()?;
+        port.write_all(&command.write_frame())?;
+        port.flush()?;
 
         // Wait for response
         std::thread::sleep(Duration::from_millis(10));
 
         // Read response to clear buffer
         let mut buffer = [0; 256];
-        match self.port.read(&mut buffer) {
+        match port.read(&mut buffer) {
             Ok(_) => {}
             Err(_) => {} // Ignore timeout errors
         }
@@ -141,15 +196,16 @@ impl SerialLoader {
             start_address: address,
             length,
         });
-        self.port.write_all(&command.write_frame())?;
-        self.port.flush()?;
+        let port = self.get_port()?;
+        port.write_all(&command.write_frame())?;
+        port.flush()?;
 
         // Wait for response
         std::thread::sleep(Duration::from_millis(50));
 
         // Read response
         let mut buffer = vec![0; length as usize];
-        match self.port.read_exact(&mut buffer) {
+        match port.read_exact(&mut buffer) {
             Ok(_) => Ok(buffer),
             Err(e) => {
                 info!("Error reading bytes from address 0x{:08X}: {}", address, e);
@@ -159,13 +215,14 @@ impl SerialLoader {
     }
     pub fn read_word(&mut self, address: u32) -> Result<u32, Box<dyn std::error::Error>> {
         let command = ProtocolHandler::new(SWDCommand::ReadWord { start_address: address });
-        self.port.write_all(&command.write_frame())?;
-        self.port.flush()?;
+        let port = self.get_port()?;
+        port.write_all(&command.write_frame())?;
+        port.flush()?;
         // Wait for response
         std::thread::sleep(Duration::from_millis(50));
         // Read response
         let mut buffer = [0; 8]; // 4 bytes for a word
-        match self.port.read_exact(&mut buffer) {
+        match port.read_exact(&mut buffer) {
             Ok(_) => {
                 info!("Read word from address 0x{:08X}: {:?}", address, buffer);
                 info!("Buffer length: {}", buffer.len());
@@ -190,13 +247,14 @@ impl SerialLoader {
             start_address: address,
             length,
         });
-        self.port.write_all(&command.write_frame())?;
-        self.port.flush()?;
+        let port = self.get_port()?;
+        port.write_all(&command.write_frame())?;
+        port.flush()?;
         // Wait for response
         std::thread::sleep(Duration::from_millis(50));
         // Read response
         let mut buffer = vec![0; (length * 4) as usize]; // 4 bytes per word
-        match self.port.read_exact(&mut buffer) {
+        match port.read_exact(&mut buffer) {
             Ok(_) => {
                 // Convert buffer to u32 value
                 if buffer.len() < 4 {
@@ -244,7 +302,7 @@ impl SerialLoader {
         info!("Read register index 0x{:02X} value: 0x{:08X}", reg_index, value);
         Ok(value)
     }
-    pub fn set_breakpoint(&mut self, address: u32) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn set_breakpoint(&mut self, _address: u32) -> Result<(), Box<dyn std::error::Error>> {
         // FPB Registers
         const FPB_CTRL: u32 = 0xe0002000; // (Control register)
         const FP_COMP0: u32 = 0xe0002008; // (Comparator 0)
@@ -300,5 +358,10 @@ impl SerialLoader {
         }
 
         Ok(true)
+    }
+
+    /// Helper method to get a mutable reference to the port
+    fn get_port(&mut self) -> Result<&mut Box<dyn SerialPort>, Box<dyn std::error::Error>> {
+        self.port.as_mut().ok_or("Serial port is not connected".into())
     }
 }
